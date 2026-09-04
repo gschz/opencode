@@ -1,0 +1,6 @@
+node_modules/
+package-lock.json
+bun.lock
+.atl/
+.gentle-ai-default-agent.json
+.ponytail-active

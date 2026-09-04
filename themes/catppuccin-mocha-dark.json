@@ -1,0 +1,36 @@
+{
+  "$schema": "https://opencode.ai/theme.json",
+  "defs": {
+    "bg": "#0D0D0D",
+    "bgPanel": "#121212",
+    "bgElement": "#1A1A1A",
+    "border": "#222222",
+    "borderActive": "#333333",
+    "text": "#E0E0E0",
+    "textMuted": "#808080",
+    "primary": "#A855F7",
+    "secondary": "#EC4899",
+    "accent": "#7C3AED",
+    "error": "#F85149",
+    "warning": "#D29922",
+    "success": "#3FB950",
+    "info": "#A855F7"
+  },
+  "theme": {
+    "primary": { "dark": "primary", "light": "primary" },
+    "secondary": { "dark": "secondary", "light": "secondary" },
+    "accent": { "dark": "accent", "light": "accent" },
+    "error": { "dark": "error", "light": "error" },
+    "warning": { "dark": "warning", "light": "warning" },
+    "success": { "dark": "success", "light": "success" },
+    "info": { "dark": "info", "light": "info" },
+    "text": { "dark": "text", "light": "text" },
+    "textMuted": { "dark": "textMuted", "light": "textMuted" },
+    "background": { "dark": "bg", "light": "bg" },
+    "backgroundPanel": { "dark": "bgPanel", "light": "bgPanel" },
+    "backgroundElement": { "dark": "bgElement", "light": "bgElement" },
+    "border": { "dark": "border", "light": "border" },
+    "borderActive": { "dark": "borderActive", "light": "borderActive" },
+    "borderSubtle": { "dark": "border", "light": "border" }
+  }
+}
