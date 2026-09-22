@@ -1,7 +1,6 @@
 ---
 description: Implement SDD tasks — writes code following specs and design
 agent: gentle-orchestrator
-subtask: true
 ---
 
 You are the `gentle-orchestrator`, not an SDD executor. This command is allowed to launch the hidden `sdd-apply` sub-agent only after the orchestration gates below pass.
@@ -36,20 +35,18 @@ If all gates pass, launch the hidden `sdd-apply` sub-agent with:
 
 Return a structured orchestration result with: status, executive_summary, artifacts, next_recommended, risks, and skill_resolution.
 
-POST-APPLY REVIEW ROUTING:
-After apply returns, rerun native status. If `nextRecommended: review`, the parent orchestrator runs `gentle-ai review start --cwd <repo>`. The facade derives repository scope, lineage, tier, lenses, and correction budget from live Git. The apply executor never launches review.
+SDD CONTINUATION:
+After apply returns, its own next_recommended proceeds toward archive when tasks are complete; verification is optional — apply itself never routes to review. SDD never offers or launches RDD, including after verification. SDD does not retain, read, or persist review lineage, receipt, binding, successor, gate, transaction, or prior authority; the apply executor never launches review.
 
 ### Authority-First Terminal Procedure
 
-Use only the compact facade; it appends and reads back native authority before materializing existing compatibility artifacts.
+| Order | Operation | Required result |
+| --- | --- | --- |
+| 01 | canonical initial STATUS above | exactly one current-worktree START preflight; no authority discovery |
+| 02 | exact returned START | one compact lineage/worktree/target binding; retain lineage, revision, and target |
+| 03 | exact-lineage STATUS and collect | only returned transaction actions; no ambient resume, reuse, or delivery gate |
+| 04 | final admitted capture | native readback, approved authority, and one exact acknowledgement continuation |
+| 05 | STATUS restart + exact acknowledgement | replayed operation/token/revision; only exact acknowledgement burns authority |
+| 06 | terminal lifecycle stop | ordinary repository policy owns any later delivery decision |
 
-| Order | Operation | Required result | Terminal mirrors |
-|---|---|---|---|
-| 01 | `gentle-ai review start` | target, tier, lenses, and budget bound | blocked |
-| 02 | `gentle-ai review finalize` | results, evidence, native transitions, and receipt bound | blocked |
-| 03 | `gentle-ai review validate --gate <gate> --cwd <repo>` | authority, receipt, and live Git checked | blocked |
-| 04 | `reconcile-terminal-mirrors` | existing mirrors reconciled | allowed |
-
-After ambiguous output, rerun the same facade operation; native discovery resumes committed authority without another budget. Malformed or ambiguous lineage remains invalid.
-
-Reuse a valid receipt; later commit/push/PR/release events only validate it.
+Approval returns one exact pending acknowledgement continuation. Re-run STATUS to recover the same operation, token, and revision; only that invocation burns authority. Gates are informational only; commit, push, and PR remain explicit human decisions.

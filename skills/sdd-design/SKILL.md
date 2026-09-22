@@ -10,15 +10,12 @@ metadata:
   delegate_only: true
 ---
 
-> **ORCHESTRATOR GATE**: If you loaded this skill via the `skill()` tool, you are
-> the ORCHESTRATOR — STOP. Do NOT execute these instructions inline. Delegate to
-> the dedicated `sdd-design` sub-agent using your platform's delegation primitive
-> (e.g., `task(...)`, sub-agent invocation, etc.). This skill is for EXECUTORS
-> only.
+## Execution Role
 
-## Executor Override
+Confirm your role before acting. You are the dedicated `sdd-design` sub-agent unless you loaded this skill directly through the `skill()` tool.
 
-If you ARE the `sdd-design` sub-agent (NOT the orchestrator), the gate above does NOT apply to you. Continue with the phase work below. Do NOT delegate. Do NOT call the Skill tool. You are the executor — execute.
+- If you are the `sdd-design` sub-agent, continue with the phase work below. Do not delegate. Do not call the Skill tool.
+- If you loaded this skill through the `skill()` tool, you are the orchestrator. Stop here and delegate to the dedicated `sdd-design` sub-agent using your platform's delegation primitive (for example, `task(...)` or a sub-agent invocation).
 
 
 ## Language Domain Contract
@@ -189,7 +186,7 @@ Ready for tasks (sdd-tasks).
 - Keep ASCII diagrams simple — clarity over beauty
 - Apply any `rules.design` from `openspec/config.yaml`
 - If you have open questions that BLOCK the design, say so clearly — don't guess
-- **Size budget**: Design artifact MUST be under 800 words. Architecture decisions as tables (option | tradeoff | decision). Code snippets only for non-obvious patterns.
+- **Sufficient detail**: Include enough detail to explain decisions, alternatives, rationale, interfaces and testing. Use tables or code snippets where they clarify non-obvious behavior. Do not truncate required detail to meet a word or line cap.
 - Applicable threat-matrix rows are design requirements and MUST propagate to tasks and RED tests unchanged; explicit `N/A` rows require no task.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.
 

@@ -1,6 +1,6 @@
 # SDD Status and Instructions Contract
 
-Shared OpenSpec-style contract for SDD commands and phase skills. Use this before acting on a change so orchestration does not guess state, paths, or edit scope.
+Shared OpenSpec-style contract for SDD commands and phase skills. Use it before acting on a change so orchestration does not guess state, paths, or edit scope.
 
 ## Purpose
 
@@ -15,23 +15,25 @@ Commands that select, continue, apply, verify, or archive an SDD change MUST fir
 
 ## Native Engine
 
-- When the session artifact store is `openspec` or `hybrid` and the `gentle-ai` binary is available, prefer `gentle-ai sdd-status [change] --cwd <repo> --json --instructions` for read-only status and `gentle-ai sdd-continue [change] --cwd <repo>` for dispatcher output. When the store is `engram`, do not invoke the binary at all (see the next bullet).
-- The native engine reads only OpenSpec file artifacts and always emits `artifactStore: openspec`; it cannot observe Engram-backed changes. Treat native status as authoritative only when the selected artifact store is `openspec` or `hybrid`. When the selected store is `engram`, do not invoke the native dispatcher at all — resolve status from Engram (`mem_search` + `mem_get_observation` on the change topic keys) using the manual status schema below, and disregard any `blocked`, `Active OpenSpec change not found`, or `nextRecommended: sdd-new` it emits for an Engram change that exists.
-- For `openspec` and `hybrid` stores, treat native status JSON as authoritative over prompt inference or manually reconstructed state.
-- When `blockedReasons` is non-empty, do not proceed to terminal, archive, or apply work. Return or report `blockedReasons` and stop unless `nextRecommended` is `verify`, in which case verification may run only to remediate or refresh evidence for the blockers. When `nextRecommended` is `resolve-blockers`, always report `blockedReasons` and stop. When `nextRecommended` is a planning token (`propose`, `spec`, `design`, or `tasks`), launch the corresponding planning phase — missing planning artifacts are the expected output of those phases, not genuine blockers.
-- `nextRecommended` is a bounded machine token for routing, not human prose. Route only by `nextRecommended` and dependency states.
-- Human-readable explanation belongs in `blockedReasons`, not `nextRecommended`.
-- If the binary is unavailable, fall back to this prompt contract and the manual status schema below. Manual fallback status MUST stay shape-compatible with native `gentle-ai.sdd-status` JSON even when values are reconstructed manually.
+Native `gentle-ai.sdd-status/v2` is the sole status contract. A request for v1 or another prior contract fails read-only with one instruction: start a fresh implementation state and rerun `gentle-ai sdd-status --contract gentle-ai.sdd-status/v2`. Research is optional and does not add a proposal-admission gate. Ask about real unresolved product decisions; pause only dependent work.
+
+- When the `gentle-ai` binary is available, prefer `gentle-ai sdd-status [change] --cwd <repo> --json --instructions` for read-only status and `gentle-ai sdd-continue [change] --cwd <repo>` only for explicit authorized continuation. This holds for every artifact store: the dispatcher resolves the declared store itself.
+- The native dispatcher resolves the artifact store the workspace DECLARES in `openspec/config.yaml` and reports it in `artifactStore`. A declared store is authoritative in both directions: it selects the resolver, and an empty declared store reports as empty rather than silently serving the other store's artifacts. Never re-resolve artifact status yourself, and never branch on the store: read the locators the dispatcher returned in `artifactPaths`.
+- For every store, treat native status JSON as authoritative over prompt inference or manually reconstructed state.
+- When `blockedReasons` is non-empty, do not proceed to terminal, archive, or apply work. Return or report `blockedReasons` and stop. Explicit read-only verification may still diagnose accessible work without granting edit authority. When `nextRecommended` is `resolve-blockers`, always report `blockedReasons` and stop. When `nextRecommended` is a planning token (`propose`, `spec`, `design`, or `tasks`), launch the corresponding planning phase — missing planning artifacts are the expected output of those phases, not genuine blockers.
+- `notes` is a separate, always-present array of informational diagnostics. A non-empty `notes` NEVER blocks anything: never withhold apply, sync, archive, or a terminal route because a note is present, and never read a note as a blocker. Report notes next to the route you report, so a human sees a future authority need before reaching it. `blockedReasons` stays reserved for genuine blockers, so the gate above reads `blockedReasons` alone.
+- `nextRecommended` is a bounded machine token for routing, not human prose. Route only by `nextRecommended` and dependency states. A genuine blocker's human-readable explanation belongs in `blockedReasons`; a non-blocking explanation belongs in `notes`.
+- If the binary is unavailable or invalid, report that native status is unresolved. Do not fabricate native-shaped status, recompute readiness, or invoke continue as a fallback.
 
 ## Status Schema
 
-Return status as markdown with these fields, or as equivalent JSON when the host supports it:
+Render the native projection as markdown or JSON. These fields document the exact frozen external `StatusV2Projection`, not permission to reconstruct native readiness:
 
 ```yaml
 schemaName: gentle-ai.sdd-status
-schemaVersion: 1
+schemaVersion: 2
 changeName: <change-name-or-null>
-artifactStore: openspec | engram | hybrid
+artifactStore: openspec | engram | hybrid | none
 planningHome:
   mode: repo-local
   path: <absolute path to openspec>
@@ -43,11 +45,6 @@ artifactPaths:
   tasks: [<absolute path>]
   applyProgress: [<absolute path>]
   verifyReport: [<absolute path>]
-  reviewLedger: [<absolute path>]
-  reviewReceipt: [<absolute path>]
-  reviewBundle: [<absolute path to reviews/chain-bundle.json>]
-  reviewContext: [<absolute path>]
-  reviewState: [<absolute path to reviews/transaction.json>]
 contextFiles:
   proposal: [<absolute readable files>]
   specs: [<absolute readable files>]
@@ -55,11 +52,6 @@ contextFiles:
   tasks: [<absolute readable files>]
   applyProgress: [<absolute readable files>]
   verifyReport: [<absolute readable files>]
-  reviewLedger: [<absolute readable files>]
-  reviewReceipt: [<absolute readable files>]
-  reviewBundle: [<absolute readable files>]
-  reviewContext: [<absolute readable files>]
-  reviewState: [<absolute readable files>]
 artifacts:
   proposal: missing | done | partial
   specs: missing | done | partial
@@ -67,11 +59,6 @@ artifacts:
   tasks: missing | done | partial
   applyProgress: missing | done | partial
   verifyReport: missing | done | partial
-  reviewLedger: missing | done | partial
-  reviewReceipt: missing | done | partial
-  reviewBundle: missing | done | partial
-  reviewContext: missing | done | partial
-  reviewState: missing | done | partial
 taskProgress:
   total: 0
   completed: 0
@@ -96,27 +83,19 @@ relationships:
   amends: []
   conflictsWith: []
   sameDomainActiveChanges: []
-remediationState:
-  required: false
-  complete: false
-  failedEvidenceRevision: ""
-  lineageId: ""
-  generation: 0
-  fixBatch: 0
-  reason: ""
-reviewGate:
-  result: allow | scope-changed | invalidated | escalated
-  reason: <deterministic explanation>
+consent: <optional exact gentle-ai.sdd-integration.consent/v1 envelope>
 phaseInstructions:
   apply: [<instruction strings>]
   verify: [<instruction strings>]
-  remediate: [<instruction strings>]
   archive: [<instruction strings>]
-nextRecommended: propose | spec | design | tasks | apply | review | verify | remediate | archive | sdd-new | select-change | resolve-blockers | resolve-review
+nextRecommended: propose | spec | design | tasks | apply | verify | archive | sdd-new | select-change | resolve-blockers
 blockedReasons: []
+notes: []
 ```
 
-`phaseInstructions` is optional and appears only when instructions are requested. It carries execution-phase keys (`apply`, `verify`, `remediate`, `archive`); planning-phase instructions (`propose`, `spec`, `design`, `tasks`) are surfaced in dispatcher markdown. `reviewGate` is omitted until final archive gating runs; when present, its result uses only the four listed values. Empty path fields MUST be arrays, not null. `changeName` and `changeRoot` are nullable; all other non-optional sections should be present in fallback output so consumers can parse native and manual status the same way.
+SDD status never reads review mode, offers RDD, or exposes review state. After completed implementation, proceed directly toward archive; verification is optional and standalone non-SDD review remains separate.
+
+`phaseInstructions` is optional and appears only when instructions are requested. It carries execution-phase keys (`apply`, `verify`, `archive`); planning-phase instructions (`propose`, `spec`, `design`, `tasks`) are surfaced in dispatcher markdown. `consent` requires an OpenSpec-backed native status reporting `blocked(edit_authority_missing)` with a valid persisted marker; never reconstruct it. Empty path fields MUST be arrays, not null. `blockedReasons` and `notes` are always arrays as well, both `[]` rather than null when empty. `changeName` and `changeRoot` are nullable; all other non-optional sections are required in native output.
 
 ## Apply State
 
@@ -128,12 +107,10 @@ blockedReasons: []
 
 - `proposal`, `specs`, `design`, and `tasks` report whether prerequisite artifacts are blocked, ready, or all done.
 - `apply` is `ready` only when specs, design, and tasks are available and task progress is not all done.
-- `verify` is `ready` only after every task is complete and the persisted bounded transaction reaches `ready_final_verification` (or has begun `final_verifying`). Missing or active review state routes to `review`; apply-progress and focused work-unit checks never make final verification ready.
-- Verify routing parses only the strict leading `gentle-ai.verify-result/v1` envelope. It compares measured requirement/scenario totals with actual specs and requires current test/build commands, zero passing exit codes, and output hashes. Human prose never controls readiness.
-- Failed evidence may route to `remediate` only when an exact persisted transaction lineage/generation has remaining mode-specific fix budget and names the same failed evidence revision. Remediation completion requires concrete focused-test, runtime-harness (or justified N/A), and rollback evidence bound to that transaction; a bare envelope never passes.
-- `archive` is `ready` only when tasks are complete, strict verification passes, and an approved receipt exactly matches the final candidate tree, paths, policy, frozen ledger, and current evidence. Missing, pending, or invalid receipts block archive. Scope change requires an explicit new lineage; new external evidence may invalidate or escalate without reopening review.
-- OpenSpec review artifacts use `openspec/changes/{change-name}/reviews/{transaction,ledger,receipt,chain-bundle,gate-context}.json`. Engram uses exact topics `sdd/{change-name}/review/{transaction,ledger,receipt,chain-bundle,gate-context}`. The chain bundle is a portable non-authoritative recovery source and requires explicit validated import into the repository-derived store. Do not substitute prompt-only state when these native artifacts are available.
-- Planning phases never auto-launch ordinary 4R or Judgment Day. Post-apply may explicitly start ordinary `review/start(target)` only when no valid receipt exists. Pre-commit, pre-push, and pre-PR validate the same receipt through the native validator and never create a new review budget. A release whose tag target is proven to be the current protected `origin/main` SHA may use the release fast path only with successful required CI for that exact SHA, an immediate remote-head recheck before tag push, and no fresh risk evidence; otherwise it falls back to native receipt validation. Major or post-incident releases always require explicit extraordinary review.
+- `verify` is an optional diagnostic and may inspect partial implementation. Its availability never certifies a report or task completion; missing artifacts limit conclusions.
+- Completed implementation normally recommends `archive`; pending work normally recommends `apply`. Explicit archive can record incomplete work, but actual edit permissions and mechanical archive/spec-composition safety checks remain mandatory.
+- Report presence is a locator/status fact, not a verdict. Missing, stale, malformed, or failed reports do not block archive or create remediation state. Preserve historical bytes and report actual unfinished tasks and findings without inventing PASS.
+- No SDD phase offers or launches RDD, ordinary 4R, or Judgment Day. Delivery follows ordinary repository policy; optional diagnostics create no review or delivery authority.
 
 ## Action Context Guard
 
@@ -143,12 +120,35 @@ The orchestrator MUST carry `actionContext` into any phase launch.
 - If `allowedEditRoots` is present, only edit files within those roots.
 - If a command cannot prove a file is inside the authoritative workspace or allowed edit roots, stop and ask for clarification.
 
+## Edit Authority Consent
+
+Status inspection requires no launch, review, delivery, or archive preflight and never runs a phase.
+Without a persisted marker, missing-root status omits consent and displays explicit preparation guidance.
+Before continue, the host must check current human scope includes the change-local marker; a planning-only
+marker grant does not grant source roots. Read-only/excluded-marker scope suppresses the mutating call.
+Continue preserves valid marker bytes and reads back the no-replace winner; malformed, inaccessible,
+failed publication/readback, or detected directory replacement emits no usable consent. No universal
+atomic visibility is claimed for publisher copy fallbacks. Grant and grant replay consume the CURRENT
+persisted marker and refuse absent/stale identity without initializing a marker or appending authority.
+
+
+A change whose tasks.md work units target paths outside `allowedEditRoots` never reports apply ready. Native status reports `applyState: blocked` and `blockedReasons` carries a `blocked(edit_authority_missing)` reason naming each unauthorized edit root and the three exits: edit tasks.md so every work unit stays inside the authorized edit roots, grant this change edit authority for the named edit roots, or mark a read-only input with `(read-only)` on its line.
+
+- Detection is conservative prose inspection: backticked path-like tokens inside markdown checkbox lines that resolve to a path outside the authorized roots. A different repository is named by its Git root; a same-repository target is narrowed to its containing edit root; a directory in no Git repository is named as itself. A backticked path immediately followed by `(read-only)` (case-insensitive) is a read-only input and not an edit target; the marker annotates only the path it follows, so an unmarked path on the same line still counts.
+- Read-only status never prepares consent; after explicit authorized `sdd-continue` preparation, an OpenSpec-backed status reporting `blocked(edit_authority_missing)` carries the typed `gentle-ai.sdd-integration.consent/v1` envelope as the optional `consent` block: headline, reason, `value`, the missing roots as evidence, exactly two choices with answer tokens `granted` and `declined` (each with label, effect, and an exact invocation), and an off-path note.
+- A later work unit's own unauthorized root does NOT block the current work unit. It is reported as a `note(future_edit_roots)` entry in `notes` naming that future root, so the current unit's `applyState` stays `ready` and `blockedReasons` stays empty until that work unit is reached.
+- Answer flow: the orchestrator relays the COMPLETE envelope losslessly as a blocking prompt. Only on the human's explicit `granted` answer does the agent execute the envelope's named grant invocation, verbatim and exactly once, then re-enter through native status. The agent NEVER runs the grant unprompted and NEVER answers on the human's behalf.
+- Decline stays blocked: the agent runs the envelope's decline invocation, nothing is persisted, the change stays `blocked(edit_authority_missing)`, and the reason names all three exits.
+
 ## Status Output
 
 Every command that acts on a change MUST show status before launching an executor or performing archive work:
 
-- Active change selection and how it was resolved.
+- Active change selection and schemaName.
 - Artifact statuses and paths/topics used as context.
 - Task progress and unchecked task list when tasks exist.
 - Next recommended action.
-- `blockedReasons` when `nextRecommended` is not `verify`, plus any edit-root blockers.
+- `blockedReasons` whenever it is non-empty, including any edit-root blockers.
+- `notes` whenever it is non-empty, labeled as informational and explicitly not a blocker.
+
+For an already archived change, terminal `all_done` dependencies mean no phase remains; they do not certify implementation or verification. Read the archive report and preserved task/report artifacts for actual outcomes.

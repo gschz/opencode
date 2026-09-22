@@ -3,4 +3,5 @@ package-lock.json
 bun.lock
 .atl/
 .gentle-ai-default-agent.json
+.gentle-ai-telemetry-runtime.json
 .ponytail-active

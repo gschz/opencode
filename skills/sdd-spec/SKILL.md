@@ -10,15 +10,12 @@ metadata:
   delegate_only: true
 ---
 
-> **ORCHESTRATOR GATE**: If you loaded this skill via the `skill()` tool, you are
-> the ORCHESTRATOR — STOP. Do NOT execute these instructions inline. Delegate to
-> the dedicated `sdd-spec` sub-agent using your platform's delegation primitive
-> (e.g., `task(...)`, sub-agent invocation, etc.). This skill is for EXECUTORS
-> only.
+## Execution Role
 
-## Executor Override
+Confirm your role before acting. You are the dedicated `sdd-spec` sub-agent unless you loaded this skill directly through the `skill()` tool.
 
-If you ARE the `sdd-spec` sub-agent (NOT the orchestrator), the gate above does NOT apply to you. Continue with the phase work below. Do NOT delegate. Do NOT call the Skill tool. You are the executor — execute.
+- If you are the `sdd-spec` sub-agent, continue with the phase work below. Do not delegate. Do not call the Skill tool.
+- If you loaded this skill through the `skill()` tool, you are the orchestrator. Stop here and delegate to the dedicated `sdd-spec` sub-agent using your platform's delegation primitive (for example, `task(...)` or a sub-agent invocation).
 
 
 ## Language Domain Contract
@@ -59,13 +56,15 @@ Read the proposal's **Capabilities section** — this is your primary contract:
 
 ```
 FOR EACH entry under "New Capabilities":
-├── This becomes a NEW full spec: openspec/specs/<capability-name>/spec.md
+├── This becomes a NEW FULL spec: openspec/changes/{change-name}/specs/<capability-name>/spec.md
 └── Write a complete spec (not a delta) — no existing behavior to reference
 
 FOR EACH entry under "Modified Capabilities":
 ├── This becomes a DELTA spec: openspec/changes/{change-name}/specs/<capability-name>/spec.md
 └── Read existing openspec/specs/<capability-name>/spec.md first — your delta modifies it
 ```
+
+Both kinds live under the change. A new capability is written under the change; sdd-archive promotes it to `openspec/specs/<capability-name>/spec.md`; never write to `openspec/specs/` during the spec phase. The dispatcher reads only `openspec/changes/{change-name}/specs/<capability-name>/spec.md`, and a spec written anywhere else keeps the change routed to `spec`.
 
 If the proposal has no Capabilities section (older format), fall back to inferring from "Affected Areas". But always prefer the explicit Capabilities mapping when present.
 
@@ -171,7 +170,7 @@ The system {MUST/SHALL/SHOULD} {do something specific}.
 
 #### For NEW Specs (No Existing Spec)
 
-If this is a completely new domain, create a FULL spec (not a delta):
+If this is a completely new domain, create a FULL spec (not a delta) at `openspec/changes/{change-name}/specs/{domain}/spec.md`. Do not write it to `openspec/specs/{domain}/spec.md`; sdd-archive promotes it there.
 
 ```markdown
 # {Domain} Specification
@@ -241,7 +240,7 @@ Ready for design (sdd-design). If design already exists, ready for tasks (sdd-ta
 - REMOVED requirements MUST include Reason and SHOULD include Migration when consumers, persisted behavior, docs, or tests are affected
 - RENAMED requirements MUST state both old and new names explicitly and SHOULD include Migration guidance for references/tests/docs
 - Apply any `rules.specs` from `openspec/config.yaml`
-- **Size budget**: Spec artifact MUST be under 650 words. Prefer requirement tables over narrative descriptions. Each scenario: 3-5 lines max.
+- **Sufficient detail**: Preserve complete requirements and testable Given/When/Then scenarios, including relevant edge cases. Use the detail each scenario needs to make its expected behavior unambiguous. Do not truncate required detail to meet a word or line cap.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.
 
 ## RFC 2119 Keywords Quick Reference
